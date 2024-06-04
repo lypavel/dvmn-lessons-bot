@@ -21,12 +21,12 @@ def process_dvmn_response(response: dict) -> dict:
     title = lesson['lesson_title']
     is_negative = lesson['is_negative']
     status = 'Принято' if not is_negative else 'Отклонено'
-    lesson_url = lesson['lesson_url']
+    url = lesson['lesson_url']
 
     return {
         'title': title,
         'status': status,
-        'lesson_url': lesson_url
+        'url': url
     }
 
 
@@ -40,7 +40,7 @@ def send_notification(check_status: dict, bot: TeleBot, chat_id: str) -> None:
     )
 
 
-def main(timestamp: int | float | None = None) -> None:
+def main(timestamp: float | None = None) -> None:
     env = Env()
     env.read_env()
 
