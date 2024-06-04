@@ -10,7 +10,7 @@
 
 <details>
   <summary>Пример уведомления от бота</summary>
-  <img src="" alt="Пример уведомления от бота">
+  <img src="https://github.com/lypavel/dvmn-lessons-bot/assets/157053921/a04577b4-5043-425c-90d6-86559b54dbd8" alt="Пример уведомления от бота">
 </details>
 
 
@@ -22,7 +22,7 @@
     ```sh
     pip install -r requirements.txt
     ```
-4. Узнайте ваш токен на Девмане [здесь](https://dvmn.org/).
+4. Узнайте ваш токен на Девмане [здесь](https://dvmn.org/api/docs/).
 5. Получите токен вашего телеграм бота. Подробнее см. [документацию](https://core.telegram.org/bots/tutorial).
 6. Узнайте ваш `chat_id`. Это можно сделать с помощью телеграм бота [@userinfobot](https://telegram.me/userinfobot).
 7. **Обязательно** начните диалог с вашим ботом.
