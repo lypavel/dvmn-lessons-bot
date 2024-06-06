@@ -1,5 +1,9 @@
+import sys
+import time
+
 from environs import Env
-import requests as rq
+import requests
+from requests.exceptions import ReadTimeout, ConnectionError
 from telebot import TeleBot
 
 
@@ -10,7 +14,7 @@ def dvmn_long_polling(token: str,
     headers = {'Authorization': f'Token {token}'}
     payload = {'timestamp': timestamp}
 
-    response = rq.get(api_url, headers=headers, params=payload)
+    response = requests.get(api_url, headers=headers, params=payload)
     response.raise_for_status()
 
     return response.json()
@@ -49,20 +53,30 @@ def main(timestamp: float | None = None) -> None:
     bot = TeleBot(env.str('TG_BOT'))
     chat_id = env.str('TG_CHAT_ID')
 
+    connection_attempt = 1
+    max_connection_attempts = 3
     while True:
         try:
-            response = dvmn_long_polling(dvmn_token, timestamp)
-        except (rq.exceptions.ReadTimeout, rq.exceptions.ConnectionError):
+            dvmn_response = dvmn_long_polling(dvmn_token, timestamp)
+        except ReadTimeout:
             pass
+        except ConnectionError:
+            print("Connection error. Trying to reconnect...", file=sys.stderr)
+            if connection_attempt > max_connection_attempts:
+                time.sleep(10)
+            connection_attempt += 1
+            continue
 
-        response_status = response['status']
-        match response_status:
+        connection_attempt = 1
+
+        dvmn_response_status = dvmn_response['status']
+        match dvmn_response_status:
             case 'timeout':
-                timestamp = response['timestamp_to_request']
+                timestamp = dvmn_response['timestamp_to_request']
             case 'found':
-                timestamp = response['last_attempt_timestamp']
+                timestamp = dvmn_response['last_attempt_timestamp']
 
-                lesson_check = process_dvmn_response(response)
+                lesson_check = process_dvmn_response(dvmn_response)
                 send_notification(lesson_check, bot, chat_id)
 
 
