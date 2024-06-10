@@ -55,13 +55,12 @@ def main(timestamp: float | None = None) -> None:
 
     connection_attempt = 1
     max_connection_attempts = 3
+
     while True:
         try:
             dvmn_response = dvmn_long_polling(dvmn_token, timestamp)
-        except ReadTimeout:
-            pass
-        except ConnectionError:
-            print("Connection error. Trying to reconnect...", file=sys.stderr)
+        except (ConnectionError, ReadTimeout) as error:
+            print(f"{error}\nTrying to reconnect...", file=sys.stderr)
             if connection_attempt > max_connection_attempts:
                 time.sleep(10)
             connection_attempt += 1
