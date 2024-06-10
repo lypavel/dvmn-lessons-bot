@@ -58,7 +58,7 @@ def main(timestamp: float | None = None) -> None:
 
     while True:
         try:
-            dvmn_response = dvmn_long_polling(dvmn_token, timestamp)
+            lesson_review = dvmn_long_polling(dvmn_token, timestamp)
         except (ConnectionError, ReadTimeout) as error:
             print(f"{error}\nTrying to reconnect...", file=sys.stderr)
             if connection_attempt > max_connection_attempts:
@@ -68,14 +68,14 @@ def main(timestamp: float | None = None) -> None:
 
         connection_attempt = 1
 
-        dvmn_response_status = dvmn_response['status']
+        dvmn_response_status = lesson_review['status']
         match dvmn_response_status:
             case 'timeout':
-                timestamp = dvmn_response['timestamp_to_request']
+                timestamp = lesson_review['timestamp_to_request']
             case 'found':
-                timestamp = dvmn_response['last_attempt_timestamp']
+                timestamp = lesson_review['last_attempt_timestamp']
 
-                lesson_check = process_dvmn_response(dvmn_response)
+                lesson_check = process_dvmn_response(lesson_review)
                 send_notification(lesson_check, bot, chat_id)
 
 
