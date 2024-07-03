@@ -1,10 +1,31 @@
-import sys
+import logging
+from logging import Formatter, Handler, INFO, LogRecord
 import time
 
 from environs import Env
 import requests
 from requests.exceptions import ReadTimeout, ConnectionError
 from telebot import TeleBot
+
+logger = logging.getLogger('lessons_bot')
+
+
+class TelegramLogsHandler(Handler):
+    def __init__(self, tg_bot: TeleBot, chat_id: str) -> None:
+        super().__init__()
+
+        self.chat_id = chat_id
+        self.tg_bot = tg_bot
+
+        self.setFormatter(Formatter('[%(name)s][%(levelname)s]: %(message)s'))
+
+    def emit(self, record: LogRecord):
+        log_entry = self.format(record)
+
+        self.tg_bot.send_message(
+            self.chat_id,
+            log_entry
+        )
 
 
 def dvmn_long_polling(token: str,
@@ -53,35 +74,46 @@ def main(timestamp: float | None = None) -> None:
     bot = TeleBot(env.str('TG_BOT'))
     chat_id = env.str('TG_CHAT_ID')
 
+    logger.setLevel(INFO)
+    logger.addHandler(TelegramLogsHandler(bot, chat_id))
+
+    logger.info('Bot started.')
+
     connection_attempt = 1
     max_connection_attempts = 3
 
     while True:
         try:
-            lesson_review = dvmn_long_polling(dvmn_token, timestamp)
-        except ReadTimeout:
-            continue
-        except ConnectionError as connection_error:
-            print(
-                f"{connection_error}\nTrying to reconnect...",
-                file=sys.stderr
-            )
-            if connection_attempt > max_connection_attempts:
-                time.sleep(10)
-            connection_attempt += 1
-            continue
+            try:
+                lesson_review = dvmn_long_polling(dvmn_token, timestamp)
+            except ReadTimeout:
+                continue
+            except ConnectionError as connection_error:
+                # prevent spamming log messages to chat
+                if connection_attempt == 1:
+                    logger.error(
+                        f'{connection_error}\nTrying to reconnect...'
+                    )
+                elif connection_attempt > max_connection_attempts:
+                    time.sleep(10)
 
-        connection_attempt = 1
+                connection_attempt += 1
+                continue
 
-        dvmn_response_status = lesson_review['status']
-        match dvmn_response_status:
-            case 'timeout':
-                timestamp = lesson_review['timestamp_to_request']
-            case 'found':
-                timestamp = lesson_review['last_attempt_timestamp']
+            connection_attempt = 1
 
-                lesson_check = process_dvmn_response(lesson_review)
-                send_notification(lesson_check, bot, chat_id)
+            dvmn_response_status = lesson_review['status']
+            match dvmn_response_status:
+                case 'timeout':
+                    timestamp = lesson_review['timestamp_to_request']
+                case 'found':
+                    timestamp = lesson_review['last_attempt_timestamp']
+
+                    lesson_check = process_dvmn_response(lesson_review)
+                    send_notification(lesson_check, bot, chat_id)
+
+        except Exception as exception:
+            logger.exception(exception)
 
 
 if __name__ == '__main__':
