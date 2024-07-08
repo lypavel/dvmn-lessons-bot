@@ -28,8 +28,8 @@ class TelegramLogsHandler(Handler):
         )
 
 
-def dvmn_long_polling(token: str,
-                      timestamp: int | float | None) -> dict:
+def get_reviewed_lesson(token: str,
+                        timestamp: int | float | None) -> dict:
     api_url = 'https://dvmn.org/api/long_polling/'
 
     headers = {'Authorization': f'Token {token}'}
@@ -55,16 +55,6 @@ def process_dvmn_response(response: dict) -> dict:
     }
 
 
-def send_notification(check_status: dict, bot: TeleBot, chat_id: str) -> None:
-    bot.send_message(
-        chat_id,
-        'Ваша работа проверена!\n\n'
-        f'Название урока: {check_status["title"]}\n'
-        f'Статус: {check_status["status"]}\n'
-        f'Ссылка: {check_status["url"]}'
-    )
-
-
 def main(timestamp: float | None = None) -> None:
     env = Env()
     env.read_env()
@@ -85,7 +75,7 @@ def main(timestamp: float | None = None) -> None:
     while True:
         try:
             try:
-                lesson_review = dvmn_long_polling(dvmn_token, timestamp)
+                lesson_review = get_reviewed_lesson(dvmn_token, timestamp)
             except ReadTimeout:
                 continue
             except ConnectionError as connection_error:
@@ -109,8 +99,15 @@ def main(timestamp: float | None = None) -> None:
                 case 'found':
                     timestamp = lesson_review['last_attempt_timestamp']
 
-                    lesson_check = process_dvmn_response(lesson_review)
-                    send_notification(lesson_check, bot, chat_id)
+                    lesson_check_status = process_dvmn_response(lesson_review)
+
+                    bot.send_message(
+                        chat_id,
+                        'Ваша работа проверена!\n\n'
+                        f'Название урока: {lesson_check_status["title"]}\n'
+                        f'Статус: {lesson_check_status["status"]}\n'
+                        f'Ссылка: {lesson_check_status["url"]}'
+                    )
 
         except Exception as exception:
             logger.exception(exception)
