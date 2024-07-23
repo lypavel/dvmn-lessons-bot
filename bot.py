@@ -4,7 +4,7 @@ import time
 
 from environs import Env
 import requests
-from requests.exceptions import ReadTimeout, ConnectionError
+from requests.exceptions import ConnectionError, HTTPError, ReadTimeout
 from telebot import TeleBot
 
 logger = logging.getLogger('lessons_bot')
@@ -78,10 +78,10 @@ def main(timestamp: float | None = None) -> None:
                 lesson_review = get_reviewed_lesson(dvmn_token, timestamp)
             except ReadTimeout:
                 continue
-            except ConnectionError as connection_error:
+            except (ConnectionError, HTTPError) as connection_error:
                 # prevent spamming log messages to chat
                 if connection_attempt == 1:
-                    logger.error(
+                    logger.exception(
                         f'{connection_error}\nTrying to reconnect...'
                     )
                 elif connection_attempt > max_connection_attempts:
